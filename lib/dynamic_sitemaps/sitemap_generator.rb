@@ -23,7 +23,7 @@ module DynamicSitemaps
 
     def write_beginning
       write '<?xml version="1.0" encoding="UTF-8"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">'
     end
 
     def write_urls
@@ -37,15 +37,34 @@ module DynamicSitemaps
     def write_url(url, options = {})
       write '<url>'
       write '<loc>' + format_url(url) + '</loc>'
-      if last_mod = options[:last_mod]
-        write '<lastmod>' + format_date(last_mod) + '</lastmod>'
+
+      if options[:news].nil?
+        if last_mod = options[:last_mod]
+          write '<lastmod>' + format_date(last_mod) + '</lastmod>'
+        end
+        if change_freq = options[:change_freq]
+          write '<changefreq>' + change_freq + '</changefreq>'
+        end
+        if priority = options[:priority]
+          write '<priority>' + priority.to_s + '</priority>'
+        end
+      else
+        write '<news:news>'
+        if name = options[:name]
+          write "<news:publication><news:name>#{name}</news:name><news:language>ko</news:language></news:publication>"
+        end
+        if published_at = options[:published_at]
+          write '<news:publication_date>' + format_date(published_at) + '</news:publication_date>'
+        end
+        if title = options[:title]
+          write "<news:title>#{ title }</news:title>"
+        end
+        if keywords = options[:keywords]
+          write "<news:keywords>#{ keywords }</news:keywords>"
+        end
+        write '</news:news>'
       end
-      if change_freq = options[:change_freq]
-        write '<changefreq>' + change_freq + '</changefreq>'
-      end
-      if priority = options[:priority]
-        write '<priority>' + priority.to_s + '</priority>'
-      end
+
       write '</url>'
     end
 
@@ -62,7 +81,12 @@ module DynamicSitemaps
         if sitemap.block
           instance_exec record, &sitemap.block
         else
-          url record, last_mod: (record.respond_to?(:updated_at) ? record.updated_at : nil)
+          url record, last_mod: (record.respond_to?(:updated_at) ? record.updated_at : nil),\
+                      published_at: (record.respond_to?(:published_at) ? record.published_at : nil),\
+                      name: (record.respond_to?(:contributor) ? record.contributor.name : nil), \
+                      title: (record.respond_to?(:title) ? record.title : nil), \
+                      keywords: (record.respond_to?(:related_stocks) ? record.related_stocks : nil), \
+                      news: "Y"
         end
       end
     end
@@ -107,9 +131,9 @@ module DynamicSitemaps
       sitemap.host
     end
 
-    def protocol
-      sitemap.protocol
-    end
+	def protocol
+	  sitemap.protocol
+	end
 
     def ensure_host!
       raise "No host specified. Please specify a host using `host \"www.mydomain.com\"` at the top of your sitemap configuration file." if sitemap.host.blank?
