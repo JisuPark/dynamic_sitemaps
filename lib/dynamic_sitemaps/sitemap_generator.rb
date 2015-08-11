@@ -57,10 +57,10 @@ module DynamicSitemaps
           write '<news:publication_date>' + format_date(published_at) + '</news:publication_date>'
         end
         if title = options[:title]
-          write "<news:title>#{ title }</news:title>"
+          write "<news:title>#{ title.gsub(/&/,'&amp;') }</news:title>"
         end
         if keywords = options[:keywords]
-          write "<news:keywords>#{ keywords }</news:keywords>"
+          write "<news:keywords>#{ keywords.gsub(/&/,'&amp;') }</news:keywords>"
         end
         write '</news:news>'
       end
